@@ -22,6 +22,7 @@ CREATE TABLE `mqtt_device` (
   `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
   `username` varchar(100) DEFAULT NULL,
   `password` varchar(100) DEFAULT NULL,
+  `salt` varchar(35) DEFAULT NULL,
   `is_superuser` tinyint(1) DEFAULT '0',
   `is_online` tinyint(1) DEFAULT '0',
   `online_at` datetime DEFAULT NULL,
