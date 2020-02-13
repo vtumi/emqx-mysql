@@ -42,7 +42,7 @@ mysql.pool = 8
 ## MySQL database.
 ##
 ## Value: String
-mysql.database = mqtt
+mysql.database = emqx
 
 ## Variables: %u = username, %c = clientid
 
@@ -100,10 +100,10 @@ mysql.acl_query = select allow, ipaddr, username, clientid, access, topic from e
 
 ```
 
-Import mqtt.sql
+Import emqx.sql
 ---------------
 
-Import mqtt.sql into your database.
+Import emqx.sql into your database.
 
 Load Plugin
 -----------

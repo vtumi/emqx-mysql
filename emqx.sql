@@ -1,7 +1,7 @@
 
-DROP TABLE IF EXISTS `mqtt_acl`;
+DROP TABLE IF EXISTS `emqx_acl`;
 
-CREATE TABLE `mqtt_acl` (
+CREATE TABLE `emqx_acl` (
   `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
   `allow` int(1) DEFAULT NULL COMMENT '0: deny, 1: allow',
   `ipaddr` varchar(60) DEFAULT NULL COMMENT 'IpAddress',
@@ -12,9 +12,9 @@ CREATE TABLE `mqtt_acl` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
-LOCK TABLES `mqtt_acl` WRITE;
+LOCK TABLES `emqx_acl` WRITE;
 
-INSERT INTO `mqtt_acl` (`id`, `allow`, `ipaddr`, `username`, `clientid`, `access`, `topic`)
+INSERT INTO `emqx_acl` (`id`, `allow`, `ipaddr`, `username`, `clientid`, `access`, `topic`)
 VALUES
 	(1,1,NULL,'$all',NULL,2,'#'),
 	(2,0,NULL,'$all',NULL,1,'$SYS/#'),

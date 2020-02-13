@@ -21,7 +21,7 @@
 ]}.
 
 {mapping, "mysql.database", "emqx_mysql.server", [
-  {default, "mqtt"},
+  {default, "emqx"},
   {datatype, string}
 ]}.
 
