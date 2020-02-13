@@ -27,9 +27,9 @@
 -include_lib("common_test/include/ct.hrl").
 
 %%setp1 init table
--define(DROP_ACL_TABLE, <<"DROP TABLE IF EXISTS emqx_acl">>).
+-define(DROP_ACL_TABLE, <<"DROP TABLE IF EXISTS mqtt_acl">>).
 
--define(CREATE_ACL_TABLE, <<"CREATE TABLE emqx_acl ("
+-define(CREATE_ACL_TABLE, <<"CREATE TABLE mqtt_acl ("
                             "   id int(11) unsigned NOT NULL AUTO_INCREMENT,"
                             "   allow int(1) DEFAULT NULL COMMENT '0: deny, 1: allow',"
                             "   ipaddr varchar(60) DEFAULT NULL COMMENT 'IpAddress',"
@@ -40,27 +40,27 @@
                             "   PRIMARY KEY (`id`)"
                             ") ENGINE=InnoDB DEFAULT CHARSET=utf8">>).
 
--define(INIT_ACL, <<"INSERT INTO emqx_acl (id, allow, ipaddr, username, clientid, access, topic)"
+-define(INIT_ACL, <<"INSERT INTO mqtt_acl (id, allow, ipaddr, username, clientid, access, topic)"
                     "VALUES
                             (1,1,'127.0.0.1','u1','c1',1,'t1'),"
                             "(2,0,'127.0.0.1','u2','c2',1,'t1'),"
                             "(3,1,'10.10.0.110','u1','c1',1,'t1'),"
                             "(4,1,'127.0.0.1','u3','c3',3,'t1')">>).
 
--define(DROP_AUTH_TABLE, <<"DROP TABLE IF EXISTS `emqx_device`">>).
+-define(DROP_AUTH_TABLE, <<"DROP TABLE IF EXISTS `mqtt_device`">>).
 
--define(CREATE_AUTH_TABLE, <<"CREATE TABLE `emqx_device` ("
+-define(CREATE_AUTH_TABLE, <<"CREATE TABLE `mqtt_device` ("
                              "`id` int(11) unsigned NOT NULL AUTO_INCREMENT,"
                              "`username` varchar(100) DEFAULT NULL,"
                              "`password` varchar(100) DEFAULT NULL,"
                              "`salt` varchar(100) DEFAULT NULL,"
                              "`is_superuser` tinyint(1) DEFAULT 0,"
-                             "`created` datetime DEFAULT NULL,"
+                             "`create_at` datetime DEFAULT NULL,"
                              "PRIMARY KEY (`id`),"
-                             "UNIQUE KEY `emqx_devicename` (`username`)"
+                             "UNIQUE KEY `mqtt_devicename` (`username`)"
                              ") ENGINE=MyISAM DEFAULT CHARSET=utf8">>).
 
--define(INIT_AUTH, <<"INSERT INTO emqx_device (id, is_superuser, username, password, salt)"
+-define(INIT_AUTH, <<"INSERT INTO mqtt_device (id, is_superuser, username, password, salt)"
                      "VALUES  (1, true, 'plain', 'plain', 'salt'),"
                              "(2, false, 'md5', '1bc29b36f623ba82aaf6724fd3b16718', 'salt'),"
                              "(3, false, 'sha', 'd8f4590320e1343a915b6394170650a8f35d6926', 'salt'),"
@@ -185,7 +185,7 @@ placeholders(_) ->
     ClientA = #{username => <<"plain">>, client_id => <<"plain">>},
 
     reload([{password_hash, plain},
-            {auth_query, "select password from emqx_device where username = '%u' and 'a_cn_val' = '%C' limit 1"}]),
+            {auth_query, "select password from mqtt_device where username = '%u' and 'a_cn_val' = '%C' limit 1"}]),
     {error, not_authorized} =
         emqx_access_control:authenticate(ClientA#{password => <<"plain">>}),
     {error, not_authorized} =
@@ -193,7 +193,7 @@ placeholders(_) ->
     {ok, _} =
         emqx_access_control:authenticate(ClientA#{password => <<"plain">>, cn => <<"a_cn_val">>}),
 
-    reload([{auth_query, "select password from emqx_device where username = '%u' and 'a_dn_val' = '%d' limit 1"}]),
+    reload([{auth_query, "select password from mqtt_device where username = '%u' and 'a_dn_val' = '%d' limit 1"}]),
     {error, not_authorized} =
         emqx_access_control:authenticate(ClientA#{password => <<"plain">>}),
     {error, not_authorized} =

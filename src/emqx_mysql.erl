@@ -79,5 +79,5 @@ check_pass(Password, HashType) ->
         {error, _Reason} -> {error, not_authorized}
     end.
 
-description() -> "Authentication with MySQL".
+description() -> "Datastore with MySQL".
 
