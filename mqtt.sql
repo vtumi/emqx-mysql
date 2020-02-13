@@ -35,7 +35,7 @@ CREATE TABLE `mqtt_device` (
 DROP TABLE IF EXISTS `mqtt_msg`;
 CREATE TABLE `mqtt_msg` (
   `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
-  `mid` varchar(100) DEFAULT NULL,
+  `mid` varchar(60) DEFAULT NULL,
   `topic` varchar(100) NOT NULL,
   `sender` varchar(100) DEFAULT NULL,
   `node` varchar(60) DEFAULT NULL,

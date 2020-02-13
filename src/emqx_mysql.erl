@@ -22,7 +22,43 @@
         , description/0
         ]).
 
+-export([ load/1
+        , unload/0
+        ]).
+
+-export([ on_client_connected/3
+        , on_client_disconnected/4
+        ]).
+
+-export([ on_message_publish/2
+        ]).
+
 -define(EMPTY(Username), (Username =:= undefined orelse Username =:= <<>>)).
+
+load(Env) ->
+    emqx:hook('client.connected',    {?MODULE, on_client_connected, [Env]}),
+    emqx:hook('client.disconnected', {?MODULE, on_client_disconnected, [Env]}),
+    emqx:hook('message.publish',     {?MODULE, on_message_publish, [Env]}).
+
+on_client_connected(ClientInfo = #{clientid := ClientId}, ConnInfo, _Env) ->
+    io:format("Client(~s) connected, ClientInfo:~n~p~n, ConnInfo:~n~p~n",
+              [ClientId, ClientInfo, ConnInfo]).
+
+on_client_disconnected(ClientInfo = #{clientid := ClientId}, ReasonCode, ConnInfo, _Env) ->
+    io:format("Client(~s) disconnected due to ~p, ClientInfo:~n~p~n, ConnInfo:~n~p~n",
+              [ClientId, ReasonCode, ClientInfo, ConnInfo]).
+
+on_message_publish(Message = #message{topic = <<"$SYS/", _/binary>>}, _Env) ->
+    {ok, Message};
+
+on_message_publish(Message, _Env) ->
+    io:format("Publish ~s~n", [emqx_message:format(Message)]),
+    {ok, Message}.
+
+unload() ->
+    emqx:unhook('client.connected',    {?MODULE, on_client_connected}),
+    emqx:unhook('client.disconnected', {?MODULE, on_client_disconnected}),
+    emqx:unhook('message.publish',     {?MODULE, on_message_publish}).
 
 register_metrics() ->
     [emqx_metrics:new(MetricName) || MetricName <- ['mysql.success', 'mysql.failure', 'mysql.ignore']].

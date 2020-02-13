@@ -36,6 +36,7 @@ start(_StartType, _StartArgs) ->
     {ok, Sup} = emqx_mysql_sup:start_link(),
     if_enabled(auth_query, fun load_auth_hook/1),
     if_enabled(acl_query,  fun load_acl_hook/1),
+    emqx_mysql:load(application:get_all_env()),
     emqx_mysql_cfg:register(),
     {ok, Sup}.
 
@@ -46,7 +47,7 @@ prep_stop(State) ->
     State.
 
 stop(_State) ->
-    ok.
+    emqx_mysql:unload().
 
 load_auth_hook(AuthQuery) ->
     SuperQuery = parse_query(application:get_env(?APP, super_query, undefined)),
