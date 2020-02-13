@@ -26,27 +26,23 @@
         , unload/0
         ]).
 
--export([ on_client_connected/3
-        , on_client_disconnected/4
-        ]).
-
--export([ on_message_publish/2
+-export([ on_client_connected/4
+        , on_client_disconnected/3
+        , on_message_publish/2
         ]).
 
 -define(EMPTY(Username), (Username =:= undefined orelse Username =:= <<>>)).
 
 load(Env) ->
-    emqx:hook('client.connected',    {?MODULE, on_client_connected, [Env]}),
-    emqx:hook('client.disconnected', {?MODULE, on_client_disconnected, [Env]}),
-    emqx:hook('message.publish',     {?MODULE, on_message_publish, [Env]}).
+    emqx:hook('client.connected', fun ?MODULE:on_client_connected/4, [Env]),
+    emqx:hook('client.disconnected', fun ?MODULE:on_client_disconnected/3, [Env]),
+    emqx:hook('message.publish', fun ?MODULE:on_message_publish/2, [Env]).
 
-on_client_connected(ClientInfo = #{clientid := ClientId}, ConnInfo, _Env) ->
-    io:format("Client(~s) connected, ClientInfo:~n~p~n, ConnInfo:~n~p~n",
-              [ClientId, ClientInfo, ConnInfo]).
+on_client_connected(#{client_id := ClientId}, ConnAck, ConnAttrs, _Env) ->
+    io:format("Client(~s) connected, connack: ~w, conn_attrs:~p~n", [ClientId, ConnAck, ConnAttrs]).
 
-on_client_disconnected(ClientInfo = #{clientid := ClientId}, ReasonCode, ConnInfo, _Env) ->
-    io:format("Client(~s) disconnected due to ~p, ClientInfo:~n~p~n, ConnInfo:~n~p~n",
-              [ClientId, ReasonCode, ClientInfo, ConnInfo]).
+on_client_disconnected(#{client_id := ClientId}, ReasonCode, _Env) ->
+    io:format("Client(~s) disconnected, reason_code: ~w~n", [ClientId, ReasonCode]).
 
 on_message_publish(Message = #message{topic = <<"$SYS/", _/binary>>}, _Env) ->
     {ok, Message};
@@ -56,9 +52,9 @@ on_message_publish(Message, _Env) ->
     {ok, Message}.
 
 unload() ->
-    emqx:unhook('client.connected',    {?MODULE, on_client_connected}),
-    emqx:unhook('client.disconnected', {?MODULE, on_client_disconnected}),
-    emqx:unhook('message.publish',     {?MODULE, on_message_publish}).
+    emqx:unhook('client.connected', fun ?MODULE:on_client_connected/4),
+    emqx:unhook('client.disconnected', fun ?MODULE:on_client_disconnected/3),
+    emqx:unhook('message.publish', fun ?MODULE:on_message_publish/2).
 
 register_metrics() ->
     [emqx_metrics:new(MetricName) || MetricName <- ['mysql.success', 'mysql.failure', 'mysql.ignore']].
