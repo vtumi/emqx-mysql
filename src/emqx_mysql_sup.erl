@@ -12,11 +12,11 @@
 %% See the License for the specific language governing permissions and
 %% limitations under the License.
 
--module(emqx_auth_mysql_sup).
+-module(emqx_mysql_sup).
 
 -behaviour(supervisor).
 
--include("emqx_auth_mysql.hrl").
+-include("emqx_mysql.hrl").
 
 -export([start_link/0]).
 
@@ -33,6 +33,6 @@ start_link() ->
 init([]) ->
     %% MySQL Connection Pool.
     {ok, Server} = application:get_env(?APP, server),
-    PoolSpec = ecpool:pool_spec(?APP, ?APP, emqx_auth_mysql_cli, Server),
+    PoolSpec = ecpool:pool_spec(?APP, ?APP, emqx_mysql_cli, Server),
     {ok, {{one_for_one, 10, 100}, [PoolSpec]}}.
 

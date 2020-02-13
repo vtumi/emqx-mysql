@@ -12,11 +12,11 @@
 %% See the License for the specific language governing permissions and
 %% limitations under the License.
 
--module(emqx_auth_mysql_cli).
+-module(emqx_mysql_cli).
 
 -behaviour(ecpool_worker).
 
--include("emqx_auth_mysql.hrl").
+-include("emqx_mysql.hrl").
 -include_lib("emqx/include/emqx.hrl").
 
 -export([parse_query/1]).

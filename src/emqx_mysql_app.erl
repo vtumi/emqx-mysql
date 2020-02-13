@@ -12,15 +12,15 @@
 %% See the License for the specific language governing permissions and
 %% limitations under the License.
 
--module(emqx_auth_mysql_app).
+-module(emqx_mysql_app).
 
 -behaviour(application).
 
 -emqx_plugin(auth).
 
--include("emqx_auth_mysql.hrl").
+-include("emqx_mysql.hrl").
 
--import(emqx_auth_mysql_cli, [parse_query/1]).
+-import(emqx_mysql_cli, [parse_query/1]).
 
 %% Application callbacks
 -export([ start/2
@@ -33,16 +33,16 @@
 %%--------------------------------------------------------------------
 
 start(_StartType, _StartArgs) ->
-    {ok, Sup} = emqx_auth_mysql_sup:start_link(),
+    {ok, Sup} = emqx_mysql_sup:start_link(),
     if_enabled(auth_query, fun load_auth_hook/1),
     if_enabled(acl_query,  fun load_acl_hook/1),
-    emqx_auth_mysql_cfg:register(),
+    emqx_mysql_cfg:register(),
     {ok, Sup}.
 
 prep_stop(State) ->
-    emqx:unhook('client.authenticate', fun emqx_auth_mysql:check/2),
+    emqx:unhook('client.authenticate', fun emqx_mysql:check/2),
     emqx:unhook('client.check_acl', fun emqx_acl_mysql:check_acl/5),
-    emqx_auth_mysql_cfg:unregister(),
+    emqx_mysql_cfg:unregister(),
     State.
 
 stop(_State) ->
@@ -54,8 +54,8 @@ load_auth_hook(AuthQuery) ->
     Params = #{auth_query  => AuthQuery,
                super_query => SuperQuery,
                hash_type   => HashType},
-    emqx_auth_mysql:register_metrics(),
-    emqx:hook('client.authenticate', fun emqx_auth_mysql:check/2, [Params]).
+    emqx_mysql:register_metrics(),
+    emqx:hook('client.authenticate', fun emqx_mysql:check/2, [Params]).
 
 load_acl_hook(AclQuery) ->
     emqx_acl_mysql:register_metrics(),

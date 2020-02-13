@@ -1,5 +1,5 @@
 
-emqx_auth_mysql
+emqx_mysql
 ===============
 
 Authentication, ACL with MySQL Database.
@@ -14,7 +14,7 @@ make && make tests
 Configure Plugin
 ----------------
 
-File: etc/emqx_auth_mysql.conf
+File: etc/emqx_mysql.conf
 
 ```
 ## MySQL server address.
@@ -22,27 +22,27 @@ File: etc/emqx_auth_mysql.conf
 ## Value: Port | IP:Port
 ##
 ## Examples: 3306, 127.0.0.1:3306, localhost:3306
-auth.mysql.server = 127.0.0.1:3306
+mysql.server = 127.0.0.1:3306
 
 ## MySQL pool size.
 ##
 ## Value: Number
-auth.mysql.pool = 8
+mysql.pool = 8
 
 ## MySQL username.
 ##
 ## Value: String
-## auth.mysql.username =
+## mysql.username =
 
 ## MySQL Password.
 ##
 ## Value: String
-## auth.mysql.password =
+## mysql.password =
 
 ## MySQL database.
 ##
 ## Value: String
-auth.mysql.database = mqtt
+mysql.database = mqtt
 
 ## Variables: %u = username, %c = clientid
 
@@ -58,26 +58,26 @@ auth.mysql.database = mqtt
 ##  - %u: username
 ##  - %c: clientid
 ##
-auth.mysql.auth_query = select password from mqtt_user where username = '%u' limit 1
-## auth.mysql.auth_query = select password_hash as password from mqtt_user where username = '%u' limit 1
+mysql.auth_query = select password from emqx_device where username = '%u' limit 1
+## mysql.auth_query = select password_hash as password from emqx_device where username = '%u' limit 1
 
 ## Password hash.
 ##
 ## Value: plain | md5 | sha | sha256 | bcrypt
-auth.mysql.password_hash = sha256
+mysql.password_hash = sha256
 
 ## sha256 with salt prefix
-## auth.mysql.password_hash = salt,sha256
+## mysql.password_hash = salt,sha256
 
 ## bcrypt with salt only prefix
-## auth.mysql.password_hash = salt,bcrypt
+## mysql.password_hash = salt,bcrypt
 
 ## sha256 with salt suffix
-## auth.mysql.password_hash = sha256,salt
+## mysql.password_hash = sha256,salt
 
 ## pbkdf2 with macfun iterations dklen
 ## macfun: md4, md5, ripemd160, sha, sha224, sha256, sha384, sha512
-## auth.mysql.password_hash = pbkdf2,sha256,1000,20
+## mysql.password_hash = pbkdf2,sha256,1000,20
 
 ## Superuser query.
 ##
@@ -86,7 +86,7 @@ auth.mysql.password_hash = sha256
 ## Variables:
 ##  - %u: username
 ##  - %c: clientid
-auth.mysql.super_query = select is_superuser from mqtt_user where username = '%u' limit 1
+mysql.super_query = select is_superuser from emqx_device where username = '%u' limit 1
 
 ## ACL query.
 ##
@@ -96,7 +96,7 @@ auth.mysql.super_query = select is_superuser from mqtt_user where username = '%u
 ##  - %a: ipaddr
 ##  - %u: username
 ##  - %c: clientid
-auth.mysql.acl_query = select allow, ipaddr, username, clientid, access, topic from mqtt_acl where ipaddr = '%a' or username = '%u' or username = '$all' or clientid = '%c'
+mysql.acl_query = select allow, ipaddr, username, clientid, access, topic from emqx_acl where ipaddr = '%a' or username = '%u' or username = '$all' or clientid = '%c'
 
 ```
 
@@ -108,7 +108,7 @@ Import mqtt.sql into your database.
 Load Plugin
 -----------
 
-./bin/emqx_ctl plugins load emqx_auth_mysql
+./bin/emqx_ctl plugins load emqx_mysql
 
 Auth Table
 ----------
@@ -116,7 +116,7 @@ Auth Table
 Notice: This is a demo table. You could authenticate with any user table.
 
 ```sql
-CREATE TABLE `mqtt_user` (
+CREATE TABLE `emqx_device` (
   `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
   `username` varchar(100) DEFAULT NULL,
   `password` varchar(100) DEFAULT NULL,
@@ -124,7 +124,7 @@ CREATE TABLE `mqtt_user` (
   `is_superuser` tinyint(1) DEFAULT 0,
   `created` datetime DEFAULT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `mqtt_username` (`username`)
+  UNIQUE KEY `emqx_devicename` (`username`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8;
 ```
 
@@ -132,7 +132,7 @@ ACL Table
 ----------
 
 ```sql
-CREATE TABLE `mqtt_acl` (
+CREATE TABLE `emqx_acl` (
   `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
   `allow` int(1) DEFAULT NULL COMMENT '0: deny, 1: allow',
   `ipaddr` varchar(60) DEFAULT NULL COMMENT 'IpAddress',

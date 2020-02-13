@@ -37,7 +37,7 @@ check_acl(Credentials, PubSub, Topic, NoMatchAction, State) ->
 do_check_acl(#{username := <<$$, _/binary>>}, _PubSub, _Topic, _NoMatchAction, _State) ->
     ok;
 do_check_acl(Credentials, PubSub, Topic, _NoMatchAction, #{acl_query := {AclSql, AclParams}}) ->
-    case emqx_auth_mysql_cli:query(AclSql, AclParams, Credentials) of
+    case emqx_mysql_cli:query(AclSql, AclParams, Credentials) of
         {ok, _Columns, []} -> ok;
         {ok, _Columns, Rows} ->
             Rules = filter(PubSub, compile(Rows)),

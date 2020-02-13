@@ -12,11 +12,11 @@
 %% See the License for the specific language governing permissions and
 %% limitations under the License.
 
--module(emqx_auth_mysql_SUITE).
+-module(emqx_mysql_SUITE).
 
 -compile(export_all).
 
--define(PID, emqx_auth_mysql).
+-define(PID, emqx_mysql).
 
 -define(APP, ?PID).
 
@@ -27,9 +27,9 @@
 -include_lib("common_test/include/ct.hrl").
 
 %%setp1 init table
--define(DROP_ACL_TABLE, <<"DROP TABLE IF EXISTS mqtt_acl">>).
+-define(DROP_ACL_TABLE, <<"DROP TABLE IF EXISTS emqx_acl">>).
 
--define(CREATE_ACL_TABLE, <<"CREATE TABLE mqtt_acl ("
+-define(CREATE_ACL_TABLE, <<"CREATE TABLE emqx_acl ("
                             "   id int(11) unsigned NOT NULL AUTO_INCREMENT,"
                             "   allow int(1) DEFAULT NULL COMMENT '0: deny, 1: allow',"
                             "   ipaddr varchar(60) DEFAULT NULL COMMENT 'IpAddress',"
@@ -40,16 +40,16 @@
                             "   PRIMARY KEY (`id`)"
                             ") ENGINE=InnoDB DEFAULT CHARSET=utf8">>).
 
--define(INIT_ACL, <<"INSERT INTO mqtt_acl (id, allow, ipaddr, username, clientid, access, topic)"
+-define(INIT_ACL, <<"INSERT INTO emqx_acl (id, allow, ipaddr, username, clientid, access, topic)"
                     "VALUES
                             (1,1,'127.0.0.1','u1','c1',1,'t1'),"
                             "(2,0,'127.0.0.1','u2','c2',1,'t1'),"
                             "(3,1,'10.10.0.110','u1','c1',1,'t1'),"
                             "(4,1,'127.0.0.1','u3','c3',3,'t1')">>).
 
--define(DROP_AUTH_TABLE, <<"DROP TABLE IF EXISTS `mqtt_user`">>).
+-define(DROP_AUTH_TABLE, <<"DROP TABLE IF EXISTS `emqx_device`">>).
 
--define(CREATE_AUTH_TABLE, <<"CREATE TABLE `mqtt_user` ("
+-define(CREATE_AUTH_TABLE, <<"CREATE TABLE `emqx_device` ("
                              "`id` int(11) unsigned NOT NULL AUTO_INCREMENT,"
                              "`username` varchar(100) DEFAULT NULL,"
                              "`password` varchar(100) DEFAULT NULL,"
@@ -57,10 +57,10 @@
                              "`is_superuser` tinyint(1) DEFAULT 0,"
                              "`created` datetime DEFAULT NULL,"
                              "PRIMARY KEY (`id`),"
-                             "UNIQUE KEY `mqtt_username` (`username`)"
+                             "UNIQUE KEY `emqx_devicename` (`username`)"
                              ") ENGINE=MyISAM DEFAULT CHARSET=utf8">>).
 
--define(INIT_AUTH, <<"INSERT INTO mqtt_user (id, is_superuser, username, password, salt)"
+-define(INIT_AUTH, <<"INSERT INTO emqx_device (id, is_superuser, username, password, salt)"
                      "VALUES  (1, true, 'plain', 'plain', 'salt'),"
                              "(2, false, 'md5', '1bc29b36f623ba82aaf6724fd3b16718', 'salt'),"
                              "(3, false, 'sha', 'd8f4590320e1343a915b6394170650a8f35d6926', 'salt'),"
@@ -71,25 +71,25 @@
                              "(8, false, 'bcrypt_wrong', '$2y$16$rEVsDarhgHYB0TGnDFJzyu', 'salt')">>).
 
 all() ->
-    [{group, emqx_auth_mysql_acl},
-     {group, emqx_auth_mysql_auth},
-     {group, emqx_auth_mysql}
+    [{group, emqx_mysql_acl},
+     {group, emqx_mysql_auth},
+     {group, emqx_mysql}
     ].
 
 groups() ->
-    [{emqx_auth_mysql_auth, [sequence], [check_auth]},
-     {emqx_auth_mysql_acl, [sequence], [check_acl, 
+    [{emqx_mysql_auth, [sequence], [check_auth]},
+     {emqx_mysql_acl, [sequence], [check_acl, 
                                         acl_super]},
-     {emqx_auth_mysql, [sequence], [comment_config, placeholders]}].
+     {emqx_mysql, [sequence], [comment_config, placeholders]}].
 
 init_per_suite(Config) ->
-    emqx_ct_helpers:start_apps([emqx_auth_mysql], fun set_special_configs/1),
+    emqx_ct_helpers:start_apps([emqx_mysql], fun set_special_configs/1),
     Config.
 
 end_per_suite(_Config) ->
     drop_table_(?DROP_AUTH_TABLE),
     drop_table_(?DROP_ACL_TABLE),
-    emqx_ct_helpers:stop_apps([emqx_auth_mysql]).
+    emqx_ct_helpers:stop_apps([emqx_mysql]).
 
 check_acl(_) ->
     init_acl_(),
@@ -167,7 +167,7 @@ check_auth(_) ->
         emqx_access_control:authenticate(BcryptWrong#{password => <<"password">>}),
     %%pbkdf2 sha
     reload([{password_hash, {pbkdf2, sha, 1, 16}},
-            {auth_query, "select password, salt from mqtt_user where username = '%u' limit 1"}]),
+            {auth_query, "select password, salt from emqx_device where username = '%u' limit 1"}]),
     {ok,#{is_superuser := false}} =
         emqx_access_control:authenticate(Pbkdf2#{password => <<"password">>}),
     reload([{password_hash, {salt, bcrypt}}]),
@@ -185,7 +185,7 @@ placeholders(_) ->
     ClientA = #{username => <<"plain">>, client_id => <<"plain">>},
 
     reload([{password_hash, plain},
-            {auth_query, "select password from mqtt_user where username = '%u' and 'a_cn_val' = '%C' limit 1"}]),
+            {auth_query, "select password from emqx_device where username = '%u' and 'a_cn_val' = '%C' limit 1"}]),
     {error, not_authorized} =
         emqx_access_control:authenticate(ClientA#{password => <<"plain">>}),
     {error, not_authorized} =
@@ -193,7 +193,7 @@ placeholders(_) ->
     {ok, _} =
         emqx_access_control:authenticate(ClientA#{password => <<"plain">>, cn => <<"a_cn_val">>}),
 
-    reload([{auth_query, "select password from mqtt_user where username = '%u' and 'a_dn_val' = '%d' limit 1"}]),
+    reload([{auth_query, "select password from emqx_device where username = '%u' and 'a_dn_val' = '%d' limit 1"}]),
     {error, not_authorized} =
         emqx_access_control:authenticate(ClientA#{password => <<"plain">>}),
     {error, not_authorized} =
@@ -202,7 +202,7 @@ placeholders(_) ->
         emqx_access_control:authenticate(ClientA#{password => <<"plain">>, dn => <<"a_dn_val">>}).
 
 set_cmd(Key) ->
-    emqx_cli_config:run(["config", "set", string:join(["auth.mysql", Key], "."), "--app=emqx_auth_mysql"]).
+    emqx_cli_config:run(["config", "set", string:join(["mysql", Key], "."), "--app=emqx_mysql"]).
 
 init_auth_() ->
     {ok, Pid} = ecpool_worker:client(gproc_pool:pick_worker({ecpool, ?PID})),

@@ -12,9 +12,9 @@
 %% See the License for the specific language governing permissions and
 %% limitations under the License.
 
--module (emqx_auth_mysql_cfg).
+-module (emqx_mysql_cfg).
 
--include("emqx_auth_mysql.hrl").
+-include("emqx_mysql.hrl").
 
 -export ([ register/0
          , unregister/0
@@ -84,12 +84,12 @@ unregister_config() ->
     clique:unregister_config_whitelist(Keys, ?APP).
 
 keys() ->
-    ["auth.mysql.server",
-     "auth.mysql.pool",
-     "auth.mysql.username",
-     "auth.mysql.password",
-     "auth.mysql.database",
-     "auth.mysql.password_hash"].
+    ["mysql.server",
+     "mysql.pool",
+     "mysql.username",
+     "mysql.password",
+     "mysql.database",
+     "mysql.password_hash"].
 
 format(Value) ->
     format(Value, "").

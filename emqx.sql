@@ -26,9 +26,9 @@ VALUES
 UNLOCK TABLES;
 
 
-DROP TABLE IF EXISTS `mqtt_user`;
+DROP TABLE IF EXISTS `emqx_device`;
 
-CREATE TABLE `mqtt_user` (
+CREATE TABLE `emqx_device` (
   `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
   `username` varchar(100) DEFAULT NULL,
   `password` varchar(100) DEFAULT NULL,
@@ -36,6 +36,6 @@ CREATE TABLE `mqtt_user` (
   `is_superuser` tinyint(1) DEFAULT 0,
   `created` datetime DEFAULT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `mqtt_username` (`username`)
+  UNIQUE KEY `emqx_devicename` (`username`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8;
 

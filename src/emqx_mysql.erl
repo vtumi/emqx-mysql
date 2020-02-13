@@ -12,7 +12,7 @@
 %% See the License for the specific language governing permissions and
 %% limitations under the License.
 
--module(emqx_auth_mysql).
+-module(emqx_mysql).
 
 -include_lib("emqx/include/emqx.hrl").
 -include_lib("emqx/include/logger.hrl").
@@ -25,12 +25,12 @@
 -define(EMPTY(Username), (Username =:= undefined orelse Username =:= <<>>)).
 
 register_metrics() ->
-    [emqx_metrics:new(MetricName) || MetricName <- ['auth.mysql.success', 'auth.mysql.failure', 'auth.mysql.ignore']].
+    [emqx_metrics:new(MetricName) || MetricName <- ['mysql.success', 'mysql.failure', 'mysql.ignore']].
 
 check(Credentials = #{password := Password}, #{auth_query  := {AuthSql, AuthParams},
                                                super_query := SuperQuery,
                                                hash_type   := HashType}) ->
-    CheckPass = case emqx_auth_mysql_cli:query(AuthSql, AuthParams, Credentials) of
+    CheckPass = case emqx_mysql_cli:query(AuthSql, AuthParams, Credentials) of
                     {ok, [<<"password">>], [[PassHash]]} ->
                         check_pass({PassHash, Password}, HashType);
                     {ok, [<<"password">>, <<"salt">>], [[PassHash, Salt]]} ->
@@ -43,15 +43,15 @@ check(Credentials = #{password := Password}, #{auth_query  := {AuthSql, AuthPara
                 end,
     case CheckPass of
         ok ->
-            emqx_metrics:inc('auth.mysql.success'),
+            emqx_metrics:inc('mysql.success'),
             {stop, Credentials#{is_superuser => is_superuser(SuperQuery, Credentials),
                                 anonymous => false,
                                 auth_result => success}};
         {error, not_found} ->
-            emqx_metrics:inc('auth.mysql.ignore'), ok;
+            emqx_metrics:inc('mysql.ignore'), ok;
         {error, ResultCode} ->
             ?LOG(error, "[MySQL] Auth from mysql failed: ~p", [ResultCode]),
-            emqx_metrics:inc('auth.mysql.failure'),
+            emqx_metrics:inc('mysql.failure'),
             {stop, Credentials#{auth_result => ResultCode, anonymous => false}}
     end.
 
@@ -62,7 +62,7 @@ check(Credentials = #{password := Password}, #{auth_query  := {AuthSql, AuthPara
 -spec(is_superuser(undefined | {string(), list()}, emqx_types:credentials()) -> boolean()).
 is_superuser(undefined, _Credentials) -> false;
 is_superuser({SuperSql, Params}, Credentials) ->
-    case emqx_auth_mysql_cli:query(SuperSql, Params, Credentials) of
+    case emqx_mysql_cli:query(SuperSql, Params, Credentials) of
         {ok, [_Super], [[1]]} ->
             true;
         {ok, [_Super], [[_False]]} ->
