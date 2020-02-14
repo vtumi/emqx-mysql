@@ -47,7 +47,8 @@ prep_stop(State) ->
     State.
 
 stop(_State) ->
-    emqx_mysql:unload().
+    emqx_mysql:unload(),
+    ok.
 
 load_auth_hook(AuthQuery) ->
     SuperQuery = parse_query(application:get_env(?APP, super_query, undefined)),

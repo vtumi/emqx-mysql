@@ -42,7 +42,6 @@ CREATE TABLE `mqtt_msg` (
   `qos` tinyint(1) NOT NULL DEFAULT '0',
   `retain` tinyint(1) DEFAULT NULL,
   `payload` blob,
-  `arrive_at` datetime NOT NULL,
   `create_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;

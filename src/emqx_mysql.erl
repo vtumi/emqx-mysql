@@ -38,11 +38,23 @@ load(Env) ->
     emqx:hook('client.disconnected', fun ?MODULE:on_client_disconnected/3, [Env]),
     emqx:hook('message.publish', fun ?MODULE:on_message_publish/2, [Env]).
 
-on_client_connected(#{client_id := ClientId}, ConnAck, ConnAttrs, _Env) ->
-    io:format("Client(~s) connected, connack: ~w, conn_attrs:~p~n", [ClientId, ConnAck, ConnAttrs]).
+on_client_connected(#{}, _ConnAck, _ConnInfo, _Env) ->
+    ok.
+on_client_connected(#{client_id := ClientId, username := Username}, 0, ConnInfo, _Env) ->
+    io:format("Client(~s) connected, conn_attrs:~p~n", [Username, ConnInfo]),
+    ok;
 
-on_client_disconnected(#{client_id := ClientId}, ReasonCode, _Env) ->
-    io:format("Client(~s) disconnected, reason_code: ~w~n", [ClientId, ReasonCode]).
+on_client_disconnected(#{}, auth_failure, _Env) ->
+    ok;
+on_client_disconnected(Client, {shutdown, Reason}, Env) when is_atom(Reason) ->
+    on_client_disconnected(Reason, Client, Env);
+on_client_disconnected(#{client_id := ClientId, username := Username}, Reason, _Env)
+    when is_atom(Reason) ->
+    io:format("Client(~s) disconnected, reason_code: ~w~n", [Username, Reason]),
+    ok;
+on_client_disconnected(_, Reason, _Env) ->
+    ?LOG(error, "Client disconnected, cannot encode reason: ~p", [Reason]),
+    ok.
 
 on_message_publish(Message = #message{topic = <<"$SYS/", _/binary>>}, _Env) ->
     {ok, Message};
@@ -112,4 +124,3 @@ check_pass(Password, HashType) ->
     end.
 
 description() -> "Datastore with MySQL".
-
