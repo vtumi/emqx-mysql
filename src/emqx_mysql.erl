@@ -38,11 +38,11 @@ load(Env) ->
     emqx:hook('client.disconnected', fun ?MODULE:on_client_disconnected/3, [Env]),
     emqx:hook('message.publish', fun ?MODULE:on_message_publish/2, [Env]).
 
-on_client_connected(#{}, _ConnAck, _ConnInfo, _Env) ->
-    ok.
 on_client_connected(#{client_id := ClientId, username := Username}, 0, ConnInfo, _Env) ->
     io:format("Client(~s) connected, conn_attrs:~p~n", [Username, ConnInfo]),
     ok;
+on_client_connected(#{}, _ConnAck, _ConnInfo, _Env) ->
+    ok.
 
 on_client_disconnected(#{}, auth_failure, _Env) ->
     ok;
@@ -72,13 +72,10 @@ register_metrics() ->
     [emqx_metrics:new(MetricName) || MetricName <- ['mysql.success', 'mysql.failure', 'mysql.ignore']].
 
 check(Credentials = #{password := Password}, #{auth_query  := {AuthSql, AuthParams},
-                                               super_query := SuperQuery,
-                                               hash_type   := HashType}) ->
+                                               super_query := SuperQuery}) ->
     CheckPass = case emqx_mysql_cli:query(AuthSql, AuthParams, Credentials) of
                     {ok, [<<"password">>], [[PassHash]]} ->
-                        check_pass({PassHash, Password}, HashType);
-                    {ok, [<<"password">>, <<"salt">>], [[PassHash, Salt]]} ->
-                        check_pass({PassHash, Salt, Password}, HashType);
+                        check_pass({PassHash, Password});
                     {ok, _Columns, []} ->
                         {error, not_found};
                     {error, Reason} ->
@@ -117,10 +114,10 @@ is_superuser({SuperSql, Params}, Credentials) ->
             false
     end.
 
-check_pass(Password, HashType) ->
-    case emqx_passwd:check_pass(Password, HashType) of
-        ok -> ok;
-        {error, _Reason} -> {error, not_authorized}
+check_pass({PassHash, Password}) ->
+    case string:equal(PassHash, Password) of
+        true -> ok;
+        false -> {error, not_authorized}
     end.
 
 description() -> "Datastore with MySQL".
