@@ -1,3 +1,4 @@
+%%-*- mode: erlang -*-
 CONFIG1 = case os:getenv("TRAVIS") of
               "true" ->
                   JobId = os:getenv("TRAVIS_JOB_ID"),
@@ -7,7 +8,7 @@ CONFIG1 = case os:getenv("TRAVIS") of
               _ ->
                   CONFIG
           end,
- 
+
 CUR_BRANCH = os:cmd("git branch | grep -e '^*' | cut -d' ' -f 2") -- "\n",
 
 MATCH_BRANCH = fun (BranchName) when BranchName =:= "master";

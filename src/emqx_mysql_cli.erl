@@ -17,63 +17,12 @@
 -behaviour(ecpool_worker).
 
 -include("emqx_mysql.hrl").
--include_lib("emqx/include/emqx.hrl").
 
--export([parse_query/1]).
 -export([connect/1]).
--export([query/3]).
-
-%%--------------------------------------------------------------------
-%% Avoid SQL Injection: Parse SQL to Parameter Query.
-%%--------------------------------------------------------------------
-
-parse_query(undefined) ->
-    undefined;
-parse_query(Sql) ->
-    case re:run(Sql, "'%[ucCad]'", [global, {capture, all, list}]) of
-        {match, Variables} ->
-            Params = [Var || [Var] <- Variables],
-            {re:replace(Sql, "'%[ucCad]'", "?", [global, {return, list}]), Params};
-        nomatch ->
-            {Sql, []}
-    end.
-
-%%--------------------------------------------------------------------
-%% MySQL Connect/Query
-%%--------------------------------------------------------------------
+-export([query/2]).
 
 connect(Options) ->
     mysql:start_link(Options).
 
-query(Sql, Params, Credentials) ->
-    ecpool:with_client(?APP, fun(C) -> mysql:query(C, Sql, replvar(Params, Credentials)) end).
-
-replvar(Params, Credentials) ->
-    replvar(Params, Credentials, []).
-
-replvar([], _Credentials, Acc) ->
-    lists:reverse(Acc);
-replvar(["'%u'" | Params], Credentials, Acc) ->
-    replvar(Params, Credentials, [safe_get(username, Credentials) | Acc]);
-replvar(["'%c'" | Params], Credentials, Acc) ->
-    replvar(Params, Credentials, [safe_get(client_id, Credentials) | Acc]);
-replvar(["'%a'" | Params], Credentials, Acc) ->
-    IpAddr = case Credentials of
-                 #{peername := {Ip, _}} -> inet_parse:ntoa(Ip);
-                 _ -> <<"undefined">>
-             end,
-    replvar(Params, Credentials, [IpAddr | Acc]);
-replvar(["'%C'" | Params], Credentials, Acc) ->
-    replvar(Params, Credentials, [safe_get(cn, Credentials)| Acc]);
-replvar(["'%d'" | Params], Credentials, Acc) ->
-    replvar(Params, Credentials, [safe_get(dn, Credentials)| Acc]);
-replvar([Param | Params], Credentials, Acc) ->
-    replvar(Params, Credentials, [Param | Acc]).
-
-safe_get(K, Credentials) ->
-    bin(maps:get(K, Credentials, undefined)).
-
-bin(A) when is_atom(A) -> atom_to_binary(A, utf8);
-bin(B) when is_binary(B) -> B;
-bin(X) -> X.
-
+query(Sql, Params) ->
+    ecpool:with_client(?APP, fun(C) -> mysql:query(C, Sql, Params) end).

@@ -12,32 +12,29 @@
 %% See the License for the specific language governing permissions and
 %% limitations under the License.
 
--module(emqx_acl_mysql).
+-module(emqx_mysql_acl).
 
 -include_lib("emqx/include/emqx.hrl").
 -include_lib("emqx/include/logger.hrl").
 
-%% ACL Callbacks
--export([ register_metrics/0
-        , check_acl/5
+-define(DEVICE_ACL_SQL, <<"select `allow`, `ipaddr`, `username`, `access`, `topic` from `mqtt_acl` where `ipaddr` = ? or `username` = ? or `username` = '$all'">>).
+
+-export([ on_client_check_acl/5
         , reload_acl/1
         , description/0
         ]).
 
-register_metrics() ->
-    [emqx_metrics:new(MetricName) || MetricName <- ['acl.mysql.allow', 'acl.mysql.deny', 'acl.mysql.ignore']].
-
-check_acl(Credentials, PubSub, Topic, NoMatchAction, State) ->
+on_client_check_acl(Credentials, PubSub, Topic, NoMatchAction, State) ->
     case do_check_acl(Credentials, PubSub, Topic, NoMatchAction, State) of
-        ok -> emqx_metrics:inc('acl.mysql.ignore'), ok;
-        {stop, allow} -> emqx_metrics:inc('acl.mysql.allow'), {stop, allow};
-        {stop, deny} -> emqx_metrics:inc('acl.mysql.deny'), {stop, deny}
+        ok -> emqx_metrics:inc('mysql.acl.ignore'), ok;
+        {stop, allow} -> emqx_metrics:inc('mysql.acl.allow'), {stop, allow};
+        {stop, deny} -> emqx_metrics:inc('mysql.acl.deny'), {stop, deny}
     end.
 
 do_check_acl(#{username := <<$$, _/binary>>}, _PubSub, _Topic, _NoMatchAction, _State) ->
     ok;
-do_check_acl(Credentials, PubSub, Topic, _NoMatchAction, #{acl_query := {AclSql, AclParams}}) ->
-    case emqx_mysql_cli:query(AclSql, AclParams, Credentials) of
+do_check_acl(Credentials = #{username := Username, peername := {Peerhost, _}}, PubSub, Topic, _NoMatchAction, _State) ->
+    case emqx_mysql_cli:query(?DEVICE_ACL_SQL, [iolist_to_binary(inet_parse:ntoa(Peerhost)), Username]) of
         {ok, _Columns, []} -> ok;
         {ok, _Columns, Rows} ->
             Rules = filter(PubSub, compile(Rows)),
@@ -70,17 +67,17 @@ compile(Rows) ->
     compile(Rows, []).
 compile([], Acc) ->
     Acc;
-compile([[Allow, IpAddr, Username, ClientId, Access, Topic]|T], Acc) ->
-    Who  = who(IpAddr, Username, ClientId),
+compile([[Allow, IpAddr, Username, Access, Topic]|T], Acc) ->
+    Who  = who(IpAddr, Username),
     Term = {allow(Allow), Who, access(Access), [topic(Topic)]},
     compile(T, [emqx_access_rule:compile(Term) | Acc]).
 
-who(_, <<"$all">>, _) ->
+who(_, <<"$all">>) ->
     all;
-who(null, null, null) ->
+who(null, null) ->
     throw(undefined_who);
-who(CIDR, Username, ClientId) ->
-    Cols = [{ipaddr, b2l(CIDR)}, {user, Username}, {client, ClientId}],
+who(CIDR, Username) ->
+    Cols = [{ipaddr, b2l(CIDR)}, {user, Username}],
     case [{C, V} || {C, V} <- Cols, not empty(V)] of
         [Who] -> Who;
         Conds -> {'and', Conds}

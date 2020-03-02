@@ -82,16 +82,8 @@ keys() ->
      "mysql.password",
      "mysql.database"].
 
-format(Value) ->
-    format(Value, "").
-format([Head], Acc) ->
-    lists:concat([Acc, Head]);
-format([Head | Tail], Acc) ->
-    format(Tail, Acc ++ lists:concat([Head, ","])).
-
 parse_servers(Value) ->
     case string:tokens(Value, ":") of
         [Domain]       -> {Domain, 3306};
         [Domain, Port] -> {Domain, list_to_integer(Port)}
     end.
-

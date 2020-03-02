@@ -62,16 +62,3 @@
    {query_timeout, Timeout},
    {keep_alive, true}]
 end}.
-
-
-{mapping, "mysql.auth_query", "emqx_mysql.auth_query", [
-  {datatype, string}
-]}.
-
-{mapping, "mysql.super_query", "emqx_mysql.super_query", [
-  {datatype, string}
-]}.
-
-{mapping, "mysql.acl_query", "emqx_mysql.acl_query", [
-  {datatype, string}
-]}.

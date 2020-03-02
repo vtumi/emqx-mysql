@@ -17,93 +17,51 @@
 -include_lib("emqx/include/emqx.hrl").
 -include_lib("emqx/include/logger.hrl").
 
--export([ register_metrics/0
-        , check/2
-        , description/0
-        ]).
+-define(DEVICE_AUTH_SQL, <<"select `password` from `mqtt_device` where `username` = ? limit 1">>).
 
--export([ load/1
-        , unload/0
-        ]).
+-define(DEVICE_SUPER_SQL, <<"select `is_superuser` from `mqtt_device` where `username` = ? limit 1">>).
 
--export([ on_client_connected/4
+-define(DEVICE_ONLINE_SQL, <<"update `mqtt_device` set `state` = 1, `node` = ?, `ipaddr` = ?, `online_at` = ? where `username` = ?">>).
+
+-define(DEVICE_OFFLINE_SQL, <<"update `mqtt_device` set `state` = 0, `offline_at` = ? where `username` = ?">>).
+
+-define(DEVICE_MESSAGE_SQL, <<"insert into `mqtt_msg` (`mid`, `topic`, `sender`, `node`, `ipaddr`, `qos`, `retain`, `payload`, `create_at`) values (?, ?, ?, ?, ?, ?, ?, ?, ?)">>).
+
+-export([ description/0
+        , on_client_authenticate/2
+        , on_client_connected/4
         , on_client_disconnected/3
         , on_message_publish/2
         ]).
 
--define(EMPTY(Username), (Username =:= undefined orelse Username =:= <<>>)).
-
-load(Env) ->
-    emqx:hook('client.connected', fun ?MODULE:on_client_connected/4, [Env]),
-    emqx:hook('client.disconnected', fun ?MODULE:on_client_disconnected/3, [Env]),
-    emqx:hook('message.publish', fun ?MODULE:on_message_publish/2, [Env]).
-
-on_client_connected(#{client_id := ClientId, username := Username}, 0, ConnInfo, _Env) ->
-    io:format("Client(~s) connected, conn_attrs:~p~n", [Username, ConnInfo]),
-    ok;
-on_client_connected(#{}, _ConnAck, _ConnInfo, _Env) ->
-    ok.
-
-on_client_disconnected(#{}, auth_failure, _Env) ->
-    ok;
-on_client_disconnected(Client, {shutdown, Reason}, Env) when is_atom(Reason) ->
-    on_client_disconnected(Reason, Client, Env);
-on_client_disconnected(#{client_id := ClientId, username := Username}, Reason, _Env)
-    when is_atom(Reason) ->
-    io:format("Client(~s) disconnected, reason_code: ~w~n", [Username, Reason]),
-    ok;
-on_client_disconnected(_, Reason, _Env) ->
-    ?LOG(error, "Client disconnected, cannot encode reason: ~p", [Reason]),
-    ok.
-
-on_message_publish(Message = #message{topic = <<"$SYS/", _/binary>>}, _Env) ->
-    {ok, Message};
-
-on_message_publish(Message, _Env) ->
-    io:format("Publish ~s~n", [emqx_message:format(Message)]),
-    {ok, Message}.
-
-unload() ->
-    emqx:unhook('client.connected', fun ?MODULE:on_client_connected/4),
-    emqx:unhook('client.disconnected', fun ?MODULE:on_client_disconnected/3),
-    emqx:unhook('message.publish', fun ?MODULE:on_message_publish/2).
-
-register_metrics() ->
-    [emqx_metrics:new(MetricName) || MetricName <- ['mysql.success', 'mysql.failure', 'mysql.ignore']].
-
-check(Credentials = #{password := Password}, #{auth_query  := {AuthSql, AuthParams},
-                                               super_query := SuperQuery}) ->
-    CheckPass = case emqx_mysql_cli:query(AuthSql, AuthParams, Credentials) of
+on_client_authenticate(Credentials = #{username := Username, password := Password}, _Env) ->
+    CheckPass = case emqx_mysql_cli:query(?DEVICE_AUTH_SQL, [Username]) of
                     {ok, [<<"password">>], [[PassHash]]} ->
                         check_pass({PassHash, Password});
                     {ok, _Columns, []} ->
                         {error, not_found};
                     {error, Reason} ->
-                        ?LOG(error, "[MySQL] query '~p' failed: ~p", [AuthSql, Reason]),
+                        ?LOG(error, "[MySQL] Auth from mysql failed: ~p", [Reason]),
                         {error, not_found}
                 end,
     case CheckPass of
         ok ->
-            emqx_metrics:inc('mysql.success'),
-            {stop, Credentials#{is_superuser => is_superuser(SuperQuery, Credentials),
+            emqx_metrics:inc('mysql.auth.success'),
+            {stop, Credentials#{is_superuser => is_superuser(Username),
                                 anonymous => false,
                                 auth_result => success}};
         {error, not_found} ->
-            emqx_metrics:inc('mysql.ignore'), ok;
+            emqx_metrics:inc('mysql.auth.ignore'), ok;
         {error, ResultCode} ->
             ?LOG(error, "[MySQL] Auth from mysql failed: ~p", [ResultCode]),
-            emqx_metrics:inc('mysql.failure'),
+            emqx_metrics:inc('mysql.auth.failure'),
             {stop, Credentials#{auth_result => ResultCode, anonymous => false}}
     end.
 
-%%--------------------------------------------------------------------
-%% Is Superuser?
-%%--------------------------------------------------------------------
-
--spec(is_superuser(undefined | {string(), list()}, emqx_types:credentials()) -> boolean()).
-is_superuser(undefined, _Credentials) -> false;
-is_superuser({SuperSql, Params}, Credentials) ->
-    case emqx_mysql_cli:query(SuperSql, Params, Credentials) of
+-spec(is_superuser(undefined | string()) -> boolean()).
+is_superuser(undefined) -> false;
+is_superuser(Username) ->
+    case emqx_mysql_cli:query(?DEVICE_SUPER_SQL, [Username]) of
         {ok, [_Super], [[1]]} ->
             true;
         {ok, [_Super], [[_False]]} ->
@@ -119,5 +77,46 @@ check_pass({PassHash, Password}) ->
         true -> ok;
         false -> {error, not_authorized}
     end.
+
+on_client_connected(#{username := Username, peername := {Peerhost, _}}, 0, ConnInfo, _Env) ->
+    emqx_metrics:inc('mysql.client.connected'),
+    emqx_mysql_cli:query(?DEVICE_ONLINE_SQL, [atom_to_binary(node(), utf8), iolist_to_binary(inet_parse:ntoa(Peerhost)), format_timestamp(maps:get(connected_at, ConnInfo)), Username]),
+    ok;
+on_client_connected(#{}, _ConnAck, _ConnInfo, _Env) ->
+    ok.
+
+on_client_disconnected(#{}, auth_failure, _Env) ->
+    ok;
+on_client_disconnected(Client, {shutdown, Reason}, Env) when is_atom(Reason) ->
+    on_client_disconnected(Reason, Client, Env);
+on_client_disconnected(#{username := Username}, Reason, _Env)
+    when is_atom(Reason) ->
+    emqx_metrics:inc('mysql.client.disconnected'),
+    emqx_mysql_cli:query(?DEVICE_OFFLINE_SQL, [format_timestamp(os:timestamp()), Username]),
+    ok;
+on_client_disconnected(_, Reason, _Env) ->
+    ?LOG(error, "Client disconnected, cannot encode reason: ~p", [Reason]),
+    ok.
+
+on_message_publish(Message = #message{topic = <<"$SYS/", _/binary>>}, _Env) ->
+    {ok, Message};
+on_message_publish(Message = #message{id = Id, topic = Topic, qos = Qos, payload = Payload, timestamp = Timestamp, headers = #{username := Username, peername := {Peerhost, _}}, flags = #{retain := Retain}}, _Env) ->
+    if
+        Qos > 0 ->
+            emqx_mysql_cli:query(?DEVICE_MESSAGE_SQL, [emqx_guid:to_hexstr(Id), Topic, Username, atom_to_binary(node(), utf8), iolist_to_binary(inet_parse:ntoa(Peerhost)), Qos, format_retain(Retain), Payload, format_timestamp(Timestamp)]);
+        true ->
+		        true
+    end,
+    {ok, Message}.
+
+format_retain(Retain) ->
+    case Retain of
+        true -> 1;
+        false -> 0
+    end.
+
+format_timestamp(TS) ->
+    {{Year, Month, Day}, {Hour, Minute, Second}} = calendar:now_to_local_time(TS),
+    lists:flatten(io_lib:format("~B-~2.10.0B-~2.10.0B ~2.10.0B:~2.10.0B:~2.10.0B", [Year, Month, Day, Hour, Minute, Second])).
 
 description() -> "Datastore with MySQL".
