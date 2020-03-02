@@ -34,7 +34,7 @@ register_formatter() ->
     [clique:register_formatter(cuttlefish_variable:tokenize(Key),
      fun formatter_callback/2) || Key <- keys()].
 
-formatter_callback([_, _, "server"], Params) ->
+formatter_callback([_, _, "address"], Params) ->
     lists:concat([proplists:get_value(host, Params), ":", proplists:get_value(port, Params)]);
 formatter_callback([_, _, "pool"], Params) ->
     proplists:get_value(pool_size, Params);
@@ -49,7 +49,7 @@ register_config() ->
     [clique:register_config(Key , fun config_callback/2) || Key <- Keys],
     clique:register_config_whitelist(Keys, ?APP).
 
-config_callback([_, _, "server"], Value0) ->
+config_callback([_, _, "address"], Value0) ->
     {Host, Port} = parse_servers(Value0),
     {ok, Env} = application:get_env(?APP, server),
     Env1 = lists:keyreplace(host, 1, Env, {host, Host}),
@@ -76,7 +76,7 @@ unregister_config() ->
     clique:unregister_config_whitelist(Keys, ?APP).
 
 keys() ->
-    ["mysql.server",
+    ["mysql.address",
      "mysql.pool",
      "mysql.username",
      "mysql.password",
