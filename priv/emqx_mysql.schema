@@ -27,7 +27,7 @@
 
 {mapping, "mysql.query_timeout", "emqx_mysql.server", [
   {default, ""},
-  {datatype, string}
+  {datatype, {duration, ms}}
 ]}.
 
 {translation, "emqx_mysql.server", fun(Conf) ->
@@ -43,14 +43,7 @@
   Username = cuttlefish:conf_get("mysql.username", Conf),
   Passwd = cuttlefish:conf_get("mysql.password", Conf),
   DB = cuttlefish:conf_get("mysql.database", Conf),
-  Timeout = case cuttlefish:conf_get("mysql.query_timeout", Conf) of
-                "" -> infinity;
-                Duration ->
-                    case cuttlefish_duration:parse(Duration, ms) of
-                      {error, Reason} -> error(Reason);
-                      Ms when is_integer(Ms) -> Ms
-                  end
-            end,
+  Timeout = cuttlefish:conf_get("mysql.query_timeout", Conf),
   [{pool_size, Pool},
    {auto_reconnect, 1},
    {host, MyHost},
