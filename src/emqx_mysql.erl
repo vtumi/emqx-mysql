@@ -105,7 +105,7 @@ on_message_publish(Message = #message{id = Id, topic = Topic, qos = Qos, payload
         Qos > 0 ->
             emqx_mysql_cli:query(?DEVICE_MESSAGE_SQL, [emqx_guid:to_hexstr(Id), Topic, Username, atom_to_binary(node(), utf8), iolist_to_binary(inet_parse:ntoa(Peerhost)), Qos, format_retain(Retain), Payload, format_timestamp(Timestamp)]);
         true ->
-		        true
+            true
     end,
     {ok, Message}.
 
