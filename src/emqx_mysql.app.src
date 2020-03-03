@@ -3,5 +3,5 @@
               {vsn,"git"},
               {modules,[]},
               {registered,[emqx_mysql_sup]},
-              {applications,[kernel,stdlib,mysql,ecpool,clique]},
+              {applications,[kernel,stdlib,ecpool,clique,mysql]},
               {mod,{emqx_mysql_app,[]}}]}.
