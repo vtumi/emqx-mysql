@@ -18,19 +18,13 @@
 -include_lib("emqx/include/logger.hrl").
 
 -define(DEVICE_AUTH_SQL, <<"select `password` from `mqtt_device` where `username` = ? limit 1">>).
-
 -define(DEVICE_SUPER_SQL, <<"select `is_superuser` from `mqtt_device` where `username` = ? limit 1">>).
-
 -define(DEVICE_ONLINE_SQL, <<"update `mqtt_device` set `state` = 1, `node` = ?, `ipaddr` = ?, `online_at` = ? where `username` = ?">>).
-
 -define(DEVICE_OFFLINE_SQL, <<"update `mqtt_device` set `state` = 0, `offline_at` = ? where `username` = ?">>).
-
 -define(DEVICE_MESSAGE_SQL, <<"insert into `mqtt_msg` (`mid`, `topic`, `sender`, `node`, `ipaddr`, `qos`, `retain`, `payload`, `create_at`) values (?, ?, ?, ?, ?, ?, ?, ?, ?)">>).
 
 -export([description/0]).
-
 -export([on_client_authenticate/2, on_client_connected/4, on_client_disconnected/3]).
-
 -export([on_message_publish/2]).
 
 on_client_authenticate(Credentials = #{username := Username, password := Password}, _Env) ->
