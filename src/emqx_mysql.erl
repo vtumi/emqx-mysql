@@ -96,7 +96,17 @@ on_message_publish(Message = #message{topic = <<"$SYS/", _/binary>>}, _Env) ->
 on_message_publish(Message = #message{id = Id, topic = Topic, qos = Qos, payload = Payload, timestamp = Timestamp, headers = #{username := Username, peername := {Peerhost, _}}, flags = #{retain := Retain}}, _Env) ->
   if
     Qos > 0 ->
-      emqx_mysql_cli:query(?DEVICE_MESSAGE_SQL, [emqx_guid:to_hexstr(Id), Topic, Username, atom_to_binary(node(), utf8), iolist_to_binary(inet_parse:ntoa(Peerhost)), Qos, format_retain(Retain), Payload, format_timestamp(Timestamp)]);
+      Params = [ emqx_guid:to_hexstr(Id)
+               , Topic
+               , Username
+               , atom_to_binary(node(), utf8)
+               , iolist_to_binary(inet_parse:ntoa(Peerhost))
+               , Qos
+               , format_retain(Retain)
+               , Payload
+               , format_timestamp(Timestamp)
+      ],
+      emqx_mysql_cli:query(?DEVICE_MESSAGE_SQL, Params);
     true ->
       true
   end,
