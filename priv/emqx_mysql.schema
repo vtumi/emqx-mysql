@@ -34,11 +34,11 @@
   {MyHost, MyPort} =
   case cuttlefish:conf_get("mysql.address", Conf) of
     {Ip, Port} -> {Ip, Port};
-    S          -> case string:tokens(S, ":") of
-                    [Domain]       -> {Domain, 3306};
-                    [Domain, Port] -> {Domain, list_to_integer(Port)}
-                  end
-    end,
+    S -> case string:tokens(S, ":") of
+      [Domain] -> {Domain, 3306};
+      [Domain, Port] -> {Domain, list_to_integer(Port)}
+    end
+  end,
   Pool = cuttlefish:conf_get("mysql.pool", Conf),
   Username = cuttlefish:conf_get("mysql.username", Conf),
   Passwd = cuttlefish:conf_get("mysql.password", Conf),

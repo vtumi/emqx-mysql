@@ -18,25 +18,22 @@
 
 -emqx_plugin(?MODULE).
 
--export([ start/2
-        , prep_stop/1
-        , stop/1
-        ]).
+-export([start/2, prep_stop/1, stop/1]).
 
 start(_StartType, _StartArgs) ->
-    {ok, Sup} = emqx_mysql_sup:start_link(),
-    register_metrics(),
-    load(application:get_all_env()),
-    emqx_mysql_cfg:register(),
-    {ok, Sup}.
+  {ok, Sup} = emqx_mysql_sup:start_link(),
+  register_metrics(),
+  load(application:get_all_env()),
+  emqx_mysql_cfg:register(),
+  {ok, Sup}.
 
 prep_stop(State) ->
-    unload(),
-    emqx_mysql_cfg:unregister(),
-    State.
+  unload(),
+  emqx_mysql_cfg:unregister(),
+  State.
 
 stop(_State) ->
-    ok.
+  ok.
 
 register_metrics() ->
     [emqx_metrics:new(MetricName) || MetricName <- ['mysql.auth.success',
@@ -49,16 +46,16 @@ register_metrics() ->
                                                     'mysql.client.disconnected',
                                                     'mysql.message.publish']].
 
-load(Env) ->
-    emqx:hook('client.authenticate', fun emqx_mysql:on_client_authenticate/2, [Env]),
-    emqx:hook('client.check_acl', fun emqx_mysql_acl:on_client_check_acl/5, [Env]),
-    emqx:hook('client.connected', fun emqx_mysql:on_client_connected/4, [Env]),
-    emqx:hook('client.disconnected', fun emqx_mysql:on_client_disconnected/3, [Env]),
-    emqx:hook('message.publish', fun emqx_mysql:on_message_publish/2, [Env]).
+load(_Env) ->
+  emqx:hook('client.authenticate', fun emqx_mysql:on_client_authenticate/2, [_Env]),
+  emqx:hook('client.check_acl', fun emqx_mysql_acl:on_client_check_acl/5, [_Env]),
+  emqx:hook('client.connected', fun emqx_mysql:on_client_connected/4, [_Env]),
+  emqx:hook('client.disconnected', fun emqx_mysql:on_client_disconnected/3, [_Env]),
+  emqx:hook('message.publish', fun emqx_mysql:on_message_publish/2, [_Env]).
 
 unload() ->
-    emqx:unhook('client.authenticate', fun emqx_mysql:on_client_authenticate/2),
-    emqx:unhook('client.check_acl', fun emqx_mysql_acl:on_client_check_acl/5),
-    emqx:unhook('client.connected', fun emqx_mysql:on_client_connected/4),
-    emqx:unhook('client.disconnected', fun emqx_mysql:on_client_disconnected/3),
-    emqx:unhook('message.publish', fun emqx_mysql:on_message_publish/2).
+  emqx:unhook('client.authenticate', fun emqx_mysql:on_client_authenticate/2),
+  emqx:unhook('client.check_acl', fun emqx_mysql_acl:on_client_check_acl/5),
+  emqx:unhook('client.connected', fun emqx_mysql:on_client_connected/4),
+  emqx:unhook('client.disconnected', fun emqx_mysql:on_client_disconnected/3),
+  emqx:unhook('message.publish', fun emqx_mysql:on_message_publish/2).

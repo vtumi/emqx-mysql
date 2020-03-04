@@ -22,7 +22,7 @@
 -export([query/2]).
 
 connect(Options) ->
-    mysql:start_link(Options).
+  mysql:start_link(Options).
 
 query(Sql, Params) ->
-    ecpool:with_client(?APP, fun(C) -> mysql:query(C, Sql, Params) end).
+  ecpool:with_client(?APP, fun(C) -> mysql:query(C, Sql, Params) end).
