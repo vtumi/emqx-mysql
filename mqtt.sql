@@ -42,7 +42,7 @@ CREATE TABLE `mqtt_msg`  (
   `ipaddr` varchar(60) DEFAULT NULL,
   `qos` tinyint(0) UNSIGNED NOT NULL DEFAULT 0,
   `retain` tinyint(0) UNSIGNED NULL DEFAULT 0,
-  `payload` blob NULL,
+  `payload` text NULL,
   `create_at` timestamp(0) NULL DEFAULT CURRENT_TIMESTAMP(0),
   PRIMARY KEY (`id`) USING BTREE
 ) ENGINE = InnoDB DEFAULT CHARSET=utf8;
