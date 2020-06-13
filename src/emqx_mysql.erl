@@ -103,7 +103,7 @@ on_message_publish(Message = #message{id = Id, topic = Topic, qos = Qos, payload
                , iolist_to_binary(inet_parse:ntoa(Peerhost))
                , Qos
                , format_retain(Retain)
-               , Payload
+               , iolist_to_binary(Payload)
                , format_timestamp(Timestamp)
       ],
       emqx_mysql_cli:query(?DEVICE_MESSAGE_SQL, Params);
