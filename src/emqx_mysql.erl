@@ -94,6 +94,7 @@ on_client_disconnected(_, Reason, _Env) ->
 on_message_publish(Message = #message{topic = <<"$SYS/", _/binary>>}, _Env) ->
   {ok, Message};
 on_message_publish(Message = #message{id = Id, topic = Topic, qos = Qos, payload = Payload, timestamp = Timestamp, headers = #{username := Username, peername := {Peerhost, _}}, flags = #{retain := Retain}}, _Env) ->
+  emqx_metrics:inc('mysql.message.publish'),
   if
     Qos > 0 ->
       Params = [ emqx_guid:to_hexstr(Id)
